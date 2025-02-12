@@ -49,10 +49,12 @@ interface Email {
 }
 
 const defaultEmail = {
+  to: [] as string[],
+  cc: [] as string[],
+  bcc: [] as string[],
   subject: "",
-  to: "",
   body: "",
-  attachments: [],
+  attachments: [] as File[],
 }
 
 const emailFolders = [
@@ -74,6 +76,7 @@ export default function EmailPage() {
   const [selectedFolder, setSelectedFolder] = useState("inbox")
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isSending, setIsSending] = useState(false)
 
   useEffect(() => {
     fetchEmails()
@@ -81,10 +84,13 @@ export default function EmailPage() {
 
   const fetchEmails = async () => {
     try {
+      setIsLoading(true)
       const response = await fetch(`/api/emails?folder=${selectedFolder}`)
       const data = await response.json()
-      setEmails(data)
-      setIsLoading(false)
+      
+      // Ensure we have an array of emails, even if empty
+      setEmails(Array.isArray(data) ? data : [])
+      
     } catch (error) {
       console.error("Error fetching emails:", error)
       toast({
@@ -92,6 +98,9 @@ export default function EmailPage() {
         title: "Error",
         description: "Failed to fetch emails",
       })
+      // Set emails to empty array on error
+      setEmails([])
+    } finally {
       setIsLoading(false)
     }
   }
@@ -99,13 +108,28 @@ export default function EmailPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch("/api/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+      setIsSending(true)
+      toast({
+        title: "Sending email...",
+        description: "Please wait while we send your email.",
       })
 
-      if (!response.ok) throw new Error()
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: Array.isArray(formData.to) ? formData.to : [formData.to],
+          cc: formData.cc,
+          bcc: formData.bcc,
+          subject: formData.subject,
+          content: formData.body
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to send email')
+      }
 
       toast({
         title: "Success",
@@ -115,12 +139,14 @@ export default function EmailPage() {
       setIsComposeDialogOpen(false)
       setFormData(defaultEmail)
       fetchEmails()
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to send email",
+        description: error.message || "Failed to send email",
       })
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -167,11 +193,12 @@ export default function EmailPage() {
     }
   }
 
-  const filteredEmails = emails.filter(email =>
-    email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    email.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    email.to.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Ensure emails is always an array before filtering
+  const filteredEmails = Array.isArray(emails) ? emails.filter(email =>
+    email.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    email.from?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    email.to?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) : []
 
   if (isLoading) {
     return (
@@ -324,9 +351,41 @@ export default function EmailPage() {
               <Input
                 id="to"
                 type="email"
-                value={formData.to}
-                onChange={(e) => setFormData({ ...formData, to: e.target.value })}
+                value={Array.isArray(formData.to) ? formData.to.join(', ') : formData.to}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  to: e.target.value.split(',').map(email => email.trim()) 
+                })}
+                placeholder="Enter email addresses (comma-separated)"
                 required
+                className="bg-gray-700 border-gray-600"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cc">CC</Label>
+              <Input
+                id="cc"
+                type="email"
+                value={formData.cc.join(', ')}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  cc: e.target.value.split(',').map(email => email.trim()) 
+                })}
+                placeholder="Enter CC email addresses (comma-separated)"
+                className="bg-gray-700 border-gray-600"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bcc">BCC</Label>
+              <Input
+                id="bcc"
+                type="email"
+                value={formData.bcc.join(', ')}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  bcc: e.target.value.split(',').map(email => email.trim()) 
+                })}
+                placeholder="Enter BCC email addresses (comma-separated)"
                 className="bg-gray-700 border-gray-600"
               />
             </div>
@@ -351,6 +410,19 @@ export default function EmailPage() {
                 rows={8}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="attachments">Attachments</Label>
+              <Input
+                id="attachments"
+                type="file"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setFormData({ ...formData, attachments: files });
+                }}
+                className="bg-gray-700 border-gray-600"
+              />
+            </div>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
@@ -360,8 +432,12 @@ export default function EmailPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-red-500 hover:bg-red-600">
-                Send Email
+              <Button 
+                type="submit" 
+                className="bg-red-500 hover:bg-red-600"
+                disabled={isSending}
+              >
+                {isSending ? 'Sending...' : 'Send Email'}
               </Button>
             </div>
           </form>

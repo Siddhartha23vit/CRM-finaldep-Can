@@ -8,7 +8,23 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/use-toast"
+
+const defaultPermissions = {
+  dashboard: false,
+  leads: false,
+  calendar: false,
+  email: false,
+  settings: false,
+  inventory: false,
+  favorites: false,
+  mls: false
+}
+
+type Permissions = {
+  [K in keyof typeof defaultPermissions]: boolean;
+};
 
 export default function AddUserPage() {
   const router = useRouter()
@@ -20,30 +36,45 @@ export default function AddUserPage() {
     role: "user",
     username: "",
     password: "",
+    permissions: defaultPermissions as Permissions
   })
+
+  const handlePermissionChange = (key: keyof Permissions, value: boolean) => {
+    setUserData({
+      ...userData,
+      permissions: {
+        ...userData.permissions,
+        [key]: value
+      }
+    })
+  }
+
+  const isAdmin = userData.role === "admin" || userData.role === "Administrator"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     
     try {
+      // If role is admin, set all permissions to true
+      const permissions = isAdmin ? 
+        Object.keys(defaultPermissions).reduce((acc, key) => ({ ...acc, [key]: true }), {}) :
+        userData.permissions
+
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify({ ...userData, permissions }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create user')
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create user')
       }
 
-      const newUser = await response.json()
-      
-      // Store user data in localStorage (in a real app, this would be handled differently)
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-      localStorage.setItem('users', JSON.stringify([...existingUsers, newUser]))
+      const { user } = await response.json()
       
       toast({
         title: "Success",
@@ -51,12 +82,12 @@ export default function AddUserPage() {
       })
 
       // Redirect to permissions page
-      router.push(`/users/permissions?userId=${newUser.id}`)
+      router.push(`/users/permissions?userId=${user._id}`)
     } catch (error) {
       console.error('Error creating user:', error)
       toast({
         title: "Error",
-        description: "Failed to create user. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create user. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -73,68 +104,109 @@ export default function AddUserPage() {
             <CardTitle>User Details</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input 
-                  id="name"
-                  required
-                  value={userData.name}
-                  onChange={(e) => setUserData({ ...userData, name: e.target.value })}
-                />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input 
+                    id="name"
+                    required
+                    value={userData.name}
+                    onChange={(e) => setUserData({ ...userData, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email"
+                    type="email"
+                    required
+                    value={userData.email}
+                    onChange={(e) => setUserData({ ...userData, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input 
+                    id="username"
+                    required
+                    value={userData.username}
+                    onChange={(e) => setUserData({ ...userData, username: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input 
+                    id="password"
+                    type="password"
+                    required
+                    value={userData.password}
+                    onChange={(e) => setUserData({ ...userData, password: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select 
+                    value={userData.role}
+                    onValueChange={(value) => setUserData({ ...userData, role: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrator</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email"
-                  type="email"
-                  required
-                  value={userData.email}
-                  onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-                />
+
+              {/* Permissions Section */}
+              <div className="space-y-4">
+                <div className="border-t pt-4">
+                  <h3 className="text-lg font-medium mb-4">Permissions</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {(Object.entries(defaultPermissions) as [keyof Permissions, boolean][]).map(([key, _]) => (
+                      <div key={key} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={key}
+                          checked={isAdmin || userData.permissions[key]}
+                          onCheckedChange={(checked) => handlePermissionChange(key, !!checked)}
+                          disabled={isAdmin}
+                        />
+                        <Label 
+                          htmlFor={key}
+                          className={`capitalize ${isAdmin ? 'text-gray-500' : ''}`}
+                        >
+                          {key}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {isAdmin && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Administrator role has all permissions enabled by default
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input 
-                  id="username"
-                  required
-                  value={userData.username}
-                  onChange={(e) => setUserData({ ...userData, username: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password"
-                  type="password"
-                  required
-                  value={userData.password}
-                  onChange={(e) => setUserData({ ...userData, password: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select 
-                  value={userData.role}
-                  onValueChange={(value) => setUserData({ ...userData, role: value })}
+
+              <div className="flex justify-end gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Administrator</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                  </SelectContent>
-                </Select>
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Creating..." : "Create User"}
+                </Button>
               </div>
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? "Creating..." : "Create User & Set Permissions"}
-              </Button>
             </form>
           </CardContent>
         </Card>

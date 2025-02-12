@@ -5,10 +5,35 @@ export function usePermissions(moduleId: string) {
   const [permissions, setPermissions] = useState<Permission | null>(null)
 
   useEffect(() => {
-    // Get user permissions from localStorage/context
-    const userPermissions = JSON.parse(localStorage.getItem('userPermissions') || '[]')
-    const modulePermissions = userPermissions.find((p: Permission) => p.moduleId === moduleId)
-    setPermissions(modulePermissions || null)
+    // Get user data from localStorage
+    const userData = localStorage.getItem('user')
+    if (!userData) return
+
+    const user = JSON.parse(userData)
+    
+    // Check if user is admin first
+    if (user.role === 'Administrator' || user.role === 'admin') {
+      setPermissions({
+        moduleId,
+        moduleName: moduleId,
+        canView: true,
+        canAdd: true,
+        canEdit: true,
+        canDelete: true
+      })
+      return
+    }
+
+    // For non-admin users, check their specific permissions
+    const hasPermission = user.permissions?.[moduleId] ?? false
+    setPermissions({
+      moduleId,
+      moduleName: moduleId,
+      canView: hasPermission,
+      canAdd: hasPermission,
+      canEdit: hasPermission,
+      canDelete: hasPermission
+    })
   }, [moduleId])
 
   return {

@@ -10,7 +10,8 @@ const defaultPermissions = {
   email: false,
   settings: false,
   inventory: false,
-  favorites: false
+  favorites: false,
+  mls: false
 };
 
 export async function GET() {
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
 
     // Normalize role to proper case
     userData.role = userData.role.toLowerCase();
-    if (userData.role === "admin" || userData.role === "administrator") {
+    if (userData.role === "admin" || userData.role === "administrator" || userData.role === "Administrator") {
       userData.role = "Administrator";
       // Set admin permissions - always full permissions for admin
       userData.permissions = {
@@ -73,7 +74,8 @@ export async function POST(request: Request) {
         email: true,
         settings: true,
         inventory: true,
-        favorites: true
+        favorites: true,
+        mls: true
       };
       console.log("Setting admin role and permissions:", { role: userData.role, permissions: userData.permissions });
     } else {
@@ -86,7 +88,8 @@ export async function POST(request: Request) {
         email: userData.permissions?.email ?? defaultPermissions.email,
         settings: userData.permissions?.settings ?? defaultPermissions.settings,
         inventory: userData.permissions?.inventory ?? defaultPermissions.inventory,
-        favorites: userData.permissions?.favorites ?? defaultPermissions.favorites
+        favorites: userData.permissions?.favorites ?? defaultPermissions.favorites,
+        mls: userData.permissions?.mls ?? defaultPermissions.mls
       };
       console.log("Setting non-admin role and permissions:", { role: userData.role, permissions: userData.permissions });
     }
@@ -173,7 +176,8 @@ export async function PUT(request: Request) {
           email: true,
           settings: true,
           inventory: true,
-          favorites: true
+          favorites: true,
+          mls: true
         };
         console.log("Updated to admin role:", { role: updateData.role, permissions: updateData.permissions });
       } else {
@@ -187,7 +191,8 @@ export async function PUT(request: Request) {
             email: updateData.permissions.email ?? existingUser.permissions?.email ?? defaultPermissions.email,
             settings: updateData.permissions.settings ?? existingUser.permissions?.settings ?? defaultPermissions.settings,
             inventory: updateData.permissions.inventory ?? existingUser.permissions?.inventory ?? defaultPermissions.inventory,
-            favorites: updateData.permissions.favorites ?? existingUser.permissions?.favorites ?? defaultPermissions.favorites
+            favorites: updateData.permissions.favorites ?? existingUser.permissions?.favorites ?? defaultPermissions.favorites,
+            mls: updateData.permissions.mls ?? existingUser.permissions?.mls ?? defaultPermissions.mls
           };
         }
       }
@@ -200,7 +205,8 @@ export async function PUT(request: Request) {
         email: updateData.permissions.email ?? existingUser.permissions?.email ?? defaultPermissions.email,
         settings: updateData.permissions.settings ?? existingUser.permissions?.settings ?? defaultPermissions.settings,
         inventory: updateData.permissions.inventory ?? existingUser.permissions?.inventory ?? defaultPermissions.inventory,
-        favorites: updateData.permissions.favorites ?? existingUser.permissions?.favorites ?? defaultPermissions.favorites
+        favorites: updateData.permissions.favorites ?? existingUser.permissions?.favorites ?? defaultPermissions.favorites,
+        mls: updateData.permissions.mls ?? existingUser.permissions?.mls ?? defaultPermissions.mls
       };
     }
 

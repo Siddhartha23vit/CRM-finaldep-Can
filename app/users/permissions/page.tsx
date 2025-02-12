@@ -9,6 +9,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useToast } from "@/components/ui/use-toast"
 
+interface Permission {
+  moduleId: string;
+  moduleName: string;
+  canView: boolean;
+  canAdd: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
 const defaultModules = [
   { id: "dashboard", name: "Dashboard" },
   { id: "lead", name: "Lead Management" },
@@ -18,6 +27,7 @@ const defaultModules = [
   { id: "settings", name: "Settings" },
   { id: "favorites", name: "Favorites" },
   { id: "inbox", name: "Inbox" },
+  { id: "mls", name: "MLS" }
 ]
 
 // Separate the content into a client component

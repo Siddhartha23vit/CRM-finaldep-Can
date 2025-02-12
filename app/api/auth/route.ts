@@ -16,7 +16,8 @@ const VALID_CREDENTIALS = {
     email: true,
     settings: true,
     inventory: true,
-    favorites: true
+    favorites: true,
+    mls: true
   },
   id: "1",
   status: "active"

@@ -17,7 +17,10 @@ import {
   Home,
   Calendar,
   Settings,
-  LogOut
+  LogOut,
+  Menu,
+  ChevronLeft,
+  Building
 } from "lucide-react";
 import { LanguageSelector } from './language-selector';
 import { UserProfile } from './user-profile';
@@ -26,6 +29,16 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { dataService, type SearchResult } from '@/lib/data-service';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ProfileSettings } from './profile-settings';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -33,18 +46,35 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // Get user data from localStorage
     const userData = localStorage.getItem('user');
     if (userData) {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
+      setUser(JSON.parse(userData));
     } else {
       router.push('/login');
     }
   }, [router]);
+
+  const navigationItems = [
+    { href: '/dashboard', icon: <LayoutDashboard className="h-5 w-5" />, label: 'Dashboard' },
+    { href: '/lead', icon: <Users className="h-5 w-5" />, label: 'Lead' },
+    ...(user?.permissions?.favorites ? [{
+      href: '/favorites',
+      icon: <Heart className="h-5 w-5" />,
+      label: 'Favorites'
+    }] : []),
+    { href: '/inbox', icon: <Mail className="h-5 w-5" />, label: 'Inbox' },
+    { href: '/inventory', icon: <Home className="h-5 w-5" />, label: 'Inventory' },
+    { href: '/users', icon: <Users className="h-5 w-5" />, label: 'Users' },
+    { href: '/mls', icon: <Building className="h-5 w-5" />, label: 'MLS' },
+    { href: '/calendar', icon: <Calendar className="h-5 w-5" />, label: 'Calendar' },
+    { href: '/settings', icon: <Settings className="h-5 w-5" />, label: 'Settings' },
+  ];
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -68,15 +98,37 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const handleResultClick = (result: SearchResult) => {
     router.push(result.link);
     clearSearch();
+    setIsMobileSearchOpen(false);
   };
 
   const handleLogout = () => {
-    // Clear all auth data
     localStorage.clear();
-    // Clear the auth cookie
     document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    // Redirect to home page
     router.push('/');
+  };
+
+  const handleUpdateAvatar = async (avatarUrl: string) => {
+    try {
+      const response = await fetch(`/api/users/${user._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ avatar: avatarUrl }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update avatar');
+      }
+
+      // Update local storage with new avatar
+      const updatedUser = { ...user, avatar: avatarUrl };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      throw error;
+    }
   };
 
   if (!user) {
@@ -88,180 +140,244 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 border-r bg-white">
-        <div className="flex h-16 items-center border-b px-6">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-red-500">
-            Get Home Realty
-          </Link>
-        </div>
-        <nav className="space-y-1 p-4">
-          <Link
-            href="/dashboard"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-gray-900",
-              pathname === '/dashboard' ? "bg-gray-100 text-gray-900" : ""
-            )}
-          >
-            <LayoutDashboard className="h-5 w-5" />
-            Dashboard
-          </Link>
-          <Link
-            href="/lead"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-gray-900",
-              pathname === '/lead' ? "bg-gray-100 text-gray-900" : ""
-            )}
-          >
-            <Users className="h-5 w-5" />
-            Lead
-          </Link>
-          {user.permissions.favorites && (
-            <Link
-              href="/favorites"
-              className={cn(
-                "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-gray-900",
-                pathname === '/favorites' ? "bg-gray-100 text-gray-900" : ""
-              )}
-            >
-              <Heart className="h-5 w-5" />
-              Favorites
-            </Link>
-          )}
-          <Link
-            href="/inbox"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-gray-900",
-              pathname === '/inbox' ? "bg-gray-100 text-gray-900" : ""
-            )}
-          >
-            <Mail className="h-5 w-5" />
-            Inbox
-          </Link>
-          <Link
-            href="/inventory"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-gray-900",
-              pathname === '/inventory' ? "bg-gray-100 text-gray-900" : ""
-            )}
-          >
-            <Home className="h-5 w-5" />
-            Inventory
-          </Link>
-          <Link
-            href="/users"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-gray-900",
-              pathname === '/users' ? "bg-gray-100 text-gray-900" : ""
-            )}
-          >
-            <Users className="h-5 w-5" />
-            Users
-          </Link>
-          <Link
-            href="/calendar"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-gray-900",
-              pathname === '/calendar' ? "bg-gray-100 text-gray-900" : ""
-            )}
-          >
-            <Calendar className="h-5 w-5" />
-            Calendar
-          </Link>
-          <Link
-            href="/settings"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-gray-900",
-              pathname === '/settings' ? "bg-gray-100 text-gray-900" : ""
-            )}
-          >
-            <Settings className="h-5 w-5" />
-            Settings
-          </Link>
+    <div className="min-h-screen w-full bg-gray-50 flex flex-col">
+      {/* Mobile Header */}
+      <header className="lg:hidden sticky top-0 z-40 bg-white border-b w-full">
+        <div className="flex h-14 sm:h-16 items-center px-3 sm:px-4">
           <Button
             variant="ghost"
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-red-500 hover:bg-gray-100"
+            size="sm"
+            className="mr-2 -ml-1"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
-            <LogOut className="h-5 w-5" />
-            Logout
+            <Menu className="h-5 w-5" />
           </Button>
-        </nav>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1">
-        {/* Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-6">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                type="search"
-                placeholder="Search events, properties..."
-                className="w-[300px] pl-8"
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1 h-7 w-7"
-                  onClick={clearSearch}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-              {/* Search Results Dropdown */}
-              {isSearching && searchResults.length > 0 && (
-                <Card className="absolute top-full left-0 w-[400px] mt-2 shadow-lg">
-                  <CardContent className="p-2">
-                    {searchResults.map((result) => (
-                      <Button
-                        key={`${result.type}-${result.id}`}
-                        variant="ghost"
-                        className="w-full justify-start text-left px-2 py-1.5"
-                        onClick={() => handleResultClick(result)}
-                      >
-                        <div>
-                          <div className="font-medium">{result.title}</div>
-                          <div className="text-sm text-gray-500">{result.subtitle}</div>
-                        </div>
-                      </Button>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
-              {isSearching && searchResults.length === 0 && searchQuery && (
-                <Card className="absolute top-full left-0 w-[400px] mt-2 shadow-lg">
-                  <CardContent className="p-4 text-center text-gray-500">
-                    No results found
-                  </CardContent>
-                </Card>
-              )}
+          <div className="flex-1 flex items-center justify-between gap-2 sm:gap-4 min-w-0">
+            <Link href="/dashboard" className="font-semibold text-red-500 truncate text-sm sm:text-base">
+              Get Home Realty
+            </Link>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsMobileSearchOpen(true)}
+                className="h-8 w-8 sm:h-9 sm:w-9"
+              >
+                <Search className="h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="h-8 w-8 sm:h-9 sm:w-9 relative"
+              >
+                <BellIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="relative">
-              <BellIcon className="h-5 w-5" />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-            </Button>
-            <LanguageSelector />
-            <UserProfile 
-              username={user.name} 
-              role={user.role}
-              className="text-gray-900"
-            />
-          </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Page Content */}
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
+      {/* Mobile Search Overlay */}
+      {isMobileSearchOpen && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          <div className="border-b safe-top">
+            <div className="flex items-center gap-2 p-3 sm:p-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 sm:h-9 sm:w-9 -ml-1"
+                onClick={() => setIsMobileSearchOpen(false)}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex-1 relative min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Input
+                  type="search"
+                  placeholder="Search..."
+                  className="w-full pl-9 h-9 sm:h-10 text-sm sm:text-base"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 safe-bottom">
+            {isSearching && searchResults.map((result) => (
+              <Button
+                key={`${result.type}-${result.id}`}
+                variant="ghost"
+                className="w-full justify-start text-left mb-2 h-auto py-2 px-3"
+                onClick={() => handleResultClick(result)}
+              >
+                <div className="w-full min-w-0">
+                  <div className="font-medium truncate text-sm sm:text-base">{result.title}</div>
+                  <div className="text-xs sm:text-sm text-gray-500 truncate">{result.subtitle}</div>
+                </div>
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 flex relative lg:h-[calc(100vh-0px)]">
+        {/* Sidebar */}
+        <aside
+          className={cn(
+            "fixed inset-y-0 left-0 z-40 w-[240px] sm:w-64 bg-white border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static safe-top safe-bottom",
+            isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="flex h-14 sm:h-16 items-center border-b px-4">
+            <Link href="/dashboard" className="font-semibold text-red-500 text-sm sm:text-base">
+              Get Home Realty
+            </Link>
+          </div>
+          <nav className="flex flex-col h-[calc(100%-3.5rem)] sm:h-[calc(100%-4rem)] p-3 sm:p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:space-y-1">
+              {navigationItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-gray-900 text-sm sm:text-base",
+                    pathname === item.href ? "bg-gray-100 text-gray-900" : ""
+                  )}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsMobileMenuOpen(false);
+                    router.push(item.href);
+                  }}
+                >
+                  {item.icon}
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              ))}
+            </div>
+            <div className="flex-1" />
+            <Button
+              variant="ghost"
+              onClick={() => {
+                handleLogout();
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-2 text-gray-500 hover:text-red-500 text-sm sm:text-base justify-start h-auto py-2"
+            >
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              <span className="truncate">Logout</span>
+            </Button>
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 flex flex-col min-h-0 w-full">
+          {/* Desktop Header */}
+          <header className="hidden lg:flex h-14 sm:h-16 items-center justify-between border-b bg-white px-4 sm:px-6 sticky top-0 z-30">
+            <div className="flex-1 flex items-center gap-4 max-w-xl">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Input
+                  type="search"
+                  placeholder="Search..."
+                  className="w-full pl-9 pr-9 h-9 sm:h-10"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    onClick={clearSearch}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+                {isSearching && searchResults.length > 0 && (
+                  <Card className="absolute top-full left-0 right-0 mt-1 shadow-lg">
+                    <CardContent className="p-1 sm:p-2 max-h-[60vh] overflow-y-auto">
+                      {searchResults.map((result) => (
+                        <Button
+                          key={`${result.type}-${result.id}`}
+                          variant="ghost"
+                          className="w-full justify-start text-left h-auto py-2 px-3"
+                          onClick={() => handleResultClick(result)}
+                        >
+                          <div className="w-full min-w-0">
+                            <div className="font-medium truncate">{result.title}</div>
+                            <div className="text-sm text-gray-500 truncate">{result.subtitle}</div>
+                          </div>
+                        </Button>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-4 ml-4">
+              <Button variant="ghost" size="sm" className="h-8 w-8 sm:h-9 sm:w-9 relative">
+                <BellIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+              </Button>
+              <LanguageSelector />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    className="flex items-center gap-2"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.avatar} alt={user?.name} />
+                      <AvatarFallback>{user?.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="hidden md:inline-block">{user?.name}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => setIsProfileOpen(true)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Profile Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+
+          {/* Page Content */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 safe-bottom">
+            <div className="container mx-auto max-w-7xl">
+              {children}
+            </div>
+          </div>
         </main>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Profile Settings Dialog */}
+      {user && (
+        <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <ProfileSettings
+              user={user}
+              onUpdateAvatar={handleUpdateAvatar}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

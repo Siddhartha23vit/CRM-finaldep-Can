@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -31,7 +30,8 @@ import {
   Home,
   FileText,
   Calendar,
-  X
+  X,
+  Menu
 } from "lucide-react"
 import { routes } from "@/lib/routes"
 
@@ -50,6 +50,8 @@ export function Header() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [showResults, setShowResults] = useState(false)
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const searchRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
@@ -57,6 +59,13 @@ export function Header() {
     const userData = localStorage.getItem("user")
     if (userData) {
       setUser(JSON.parse(userData))
+    }
+
+    // Get unread notifications count
+    const notificationsData = localStorage.getItem("notifications")
+    if (notificationsData) {
+      const notifications = JSON.parse(notificationsData)
+      setUnreadCount(notifications.filter((n: any) => !n.read).length)
     }
 
     // Click outside handler
@@ -81,8 +90,6 @@ export function Header() {
     setIsSearching(true)
     setShowResults(true)
 
-    // Search in localStorage for demo purposes
-    // In a real app, this would be an API call
     try {
       const results: SearchResult[] = []
       
@@ -140,12 +147,12 @@ export function Header() {
 
   const getSearchIcon = (type: SearchResult['type']) => {
     switch (type) {
-      case 'lead': return <UserPlus className="h-4 w-4" />
-      case 'property': return <Home className="h-4 w-4" />
-      case 'user': return <UserCircle className="h-4 w-4" />
-      case 'document': return <FileText className="h-4 w-4" />
-      case 'showing': return <Calendar className="h-4 w-4" />
-      default: return <Search className="h-4 w-4" />
+      case 'lead': return <UserPlus className="h-4 w-4 flex-shrink-0" />
+      case 'property': return <Home className="h-4 w-4 flex-shrink-0" />
+      case 'user': return <UserCircle className="h-4 w-4 flex-shrink-0" />
+      case 'document': return <FileText className="h-4 w-4 flex-shrink-0" />
+      case 'showing': return <Calendar className="h-4 w-4 flex-shrink-0" />
+      default: return <Search className="h-4 w-4 flex-shrink-0" />
     }
   }
 
@@ -156,113 +163,44 @@ export function Header() {
   }
 
   return (
-    <div className="h-16 border-b bg-white px-4 flex items-center justify-between">
-      <div className="flex-1 max-w-xl" ref={searchRef}>
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input 
-            type="search" 
-            placeholder="Search leads, properties, users..." 
-            className="pl-8 bg-gray-50 border-none w-full"
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            onFocus={() => setShowResults(true)}
-          />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 p-0"
-              onClick={() => {
-                setSearchQuery("")
-                setSearchResults([])
-                setShowResults(false)
-              }}
-            >
-              <X className="h-4 w-4" />
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center h-auto sm:h-14 px-3 sm:px-4">
+        <div className="flex items-center justify-between w-full sm:w-auto py-2 sm:py-0">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="sm:hidden">
+              <Menu className="h-5 w-5" />
             </Button>
-          )}
+            <span className="font-semibold">Admin</span>
+          </div>
+          <div className="flex items-center gap-2 sm:hidden">
+            <Button variant="ghost" size="icon">
+              <Bell className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon">
+              <Search className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+        
+        <div className="w-full pb-2 sm:pb-0 sm:w-auto sm:ml-4 sm:flex-1">
+          <div className="relative w-full">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="w-full pl-9 pr-4 h-9 sm:h-10 text-sm sm:text-base"
+            />
+          </div>
+        </div>
 
-          {/* Search Results Dropdown */}
-          {showResults && (searchResults.length > 0 || isSearching) && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50">
-              {isSearching ? (
-                <div className="p-4 text-center text-gray-500">Searching...</div>
-              ) : (
-                <div className="py-2">
-                  {searchResults.map((result) => (
-                    <Button
-                      key={`${result.type}-${result.id}`}
-                      variant="ghost"
-                      className="w-full justify-start px-4 py-2 hover:bg-gray-50"
-                      onClick={() => {
-                        router.push(result.url)
-                        setShowResults(false)
-                        setSearchQuery("")
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        {getSearchIcon(result.type)}
-                        <div className="text-left">
-                          <div className="font-medium">{result.title}</div>
-                          <div className="text-sm text-gray-500">{result.subtitle}</div>
-                        </div>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        <div className="hidden sm:flex items-center gap-4 ml-auto">
+          <Button variant="ghost" size="icon">
+            <Bell className="h-5 w-5" />
+          </Button>
+          <UserButton />
         </div>
       </div>
-
-      <div className="flex items-center space-x-4">
-        <Button variant="ghost" className="relative">
-          <Bell className="h-5 w-5 text-gray-600" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs flex items-center justify-center rounded-full">
-              {unreadCount}
-            </span>
-          )}
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage 
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'default'}`}
-                  alt={user?.name || 'User'}
-                />
-                <AvatarFallback>{user?.name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-              </Avatar>
-              <span className="font-medium">{user?.name || 'User'}</span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => router.push(routes.settingsProfile)}>
-              <UserCircle className="h-4 w-4 mr-2" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push(routes.settingsNotifications)}>
-              <Bell className="h-4 w-4 mr-2" />
-              Notifications
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push(routes.settingsSecurity)}>
-              <Shield className="h-4 w-4 mr-2" />
-              Security
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
+    </header>
   )
 }
 
