@@ -102,7 +102,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
+    // Only remove auth-related items
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
     document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     router.push('/');
   };

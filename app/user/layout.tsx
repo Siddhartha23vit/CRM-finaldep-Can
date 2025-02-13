@@ -130,6 +130,14 @@ export default function UserLayout({ children }: UserLayoutProps) {
     }
   };
 
+  const handleLogout = () => {
+    // Only remove auth-related items
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    router.push('/');
+  };
+
   const SidebarContent = () => (
     <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-800 px-6 ring-1 ring-white/5">
       <div className="flex h-16 shrink-0 items-center">
@@ -177,11 +185,7 @@ export default function UserLayout({ children }: UserLayoutProps) {
               <Button
                 variant="ghost"
                 className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-400 hover:bg-gray-700 hover:text-red-500"
-                onClick={() => {
-                  localStorage.clear();
-                  document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                  router.push('/');
-                }}
+                onClick={handleLogout}
               >
                 <LogOut
                   className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-red-500"
@@ -317,11 +321,7 @@ export default function UserLayout({ children }: UserLayoutProps) {
                       Profile Settings
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => {
-                      localStorage.clear();
-                      document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                      router.push('/');
-                    }}>
+                    <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       Logout
                     </DropdownMenuItem>
