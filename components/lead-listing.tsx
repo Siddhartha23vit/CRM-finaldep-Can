@@ -8,12 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CallHistory } from "@/components/call-history"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Phone, Mail, Home, Calendar, ClipboardList, PlusCircle, Plus, Upload, Info, History } from "lucide-react"
+import { Phone, Mail, Home, Calendar, ClipboardList, PlusCircle, Plus, Upload, Info, History, Search, Filter } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { StrategyPlanner } from "@/components/strategy-planner"
 import { format } from "date-fns"
-import { Lead } from "@/lib/types"
+import type { Lead, Task } from "@/lib/types"
 import { useRouter } from "next/navigation"
 import { formatDate } from "@/lib/utils"
 import { parseExcelLeads } from "@/lib/excel-utils"
@@ -24,33 +24,46 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { TaskManager } from "@/components/task-manager"
+import { LeadForm } from "@/components/lead-form"
+import { Label } from "@/components/ui/label"
 
-interface Task {
-  id: string
-  date: Date
-  task: string
-}
+const leadStatuses = [
+  { value: 'cold', label: 'Cold' },
+  { value: 'warm', label: 'Warm' },
+  { value: 'hot', label: 'Hot' },
+  { value: 'mild', label: 'Mild' },
+];
 
-interface Lead {
-  _id: string
-  name: string
-  email: string
-  phone: string
-  status: string
-  property: string
-  date: string
-  notes: string
-  callHistory: Array<{
-    date: string
-    duration: number
-    recording: string
-  }>
-  strategy?: {
-    lastUpdated: string
-    tasks: Task[]
-    notes: string
-  }
-}
+const leadResponses = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'not answering', label: 'Not Answering' },
+  { value: 'not actively answering', label: 'Not Actively Answering' },
+  { value: 'always responding', label: 'Always Responding' },
+];
+
+const leadSources = [
+  { value: 'google ads', label: 'Google Ads' },
+  { value: 'meta', label: 'Meta' },
+  { value: 'refferal', label: 'Referral' },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'youtube', label: 'YouTube' },
+];
+
+const leadTypes = [
+  { value: 'Pre construction', label: 'Pre Construction' },
+  { value: 'resale', label: 'Resale' },
+  { value: 'seller', label: 'Seller' },
+  { value: 'buyer', label: 'Buyer' },
+];
+
+const clientTypes = [
+  { value: 'Investor', label: 'Investor' },
+  { value: 'custom buyer', label: 'Custom Buyer' },
+  { value: 'first home buyer', label: 'First Home Buyer' },
+  { value: 'seasonal investor', label: 'Seasonal Investor' },
+  { value: 'commercial buyer', label: 'Commercial Buyer' },
+];
 
 export function LeadListing() {
   const [leads, setLeads] = useState<Lead[]>([])
@@ -63,10 +76,22 @@ export function LeadListing() {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false)
   const router = useRouter()
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  const [users, setUsers] = useState<{ _id: string; name: string }[]>([])
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false)
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
+  const [filters, setFilters] = useState({
+    leadStatus: "",
+    leadType: "",
+    leadSource: "",
+    leadResponse: "",
+    clientType: "",
+  })
+  const [searchQuery, setSearchQuery] = useState("")
 
-  // Separate mounting and data fetching
   useEffect(() => {
     setMounted(true)
+    fetchLeads()
+    fetchUsers()
   }, [])
 
   useEffect(() => {
@@ -118,6 +143,21 @@ export function LeadListing() {
     }
   }
 
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users')
+      const data = await response.json()
+      setUsers(data)
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    }
+  }
+
+  const getUserName = (userId: string) => {
+    const user = users.find(u => u._id === userId)
+    return user ? user.name : 'Unassigned'
+  }
+
   const handleStatusChange = async (leadId: string, newStatus: string) => {
     try {
       const response = await fetch("/api/leads", {
@@ -142,8 +182,8 @@ export function LeadListing() {
     }
   }
 
-  const getStatusColor = (status: Lead['status']) => {
-    const colors = {
+  const getStatusColor = (status: string) => {
+    const statusColors: Record<string, string> = {
       new: "bg-blue-100 text-blue-800",
       contacted: "bg-yellow-100 text-yellow-800",
       qualified: "bg-green-100 text-green-800",
@@ -151,7 +191,7 @@ export function LeadListing() {
       negotiation: "bg-orange-100 text-orange-800",
       closed: "bg-gray-100 text-gray-800"
     }
-    return colors[status]
+    return statusColors[status] || statusColors.new
   }
 
   const handleCall = async (leadId: string, phoneNumber: string) => {
@@ -263,6 +303,43 @@ export function LeadListing() {
     }
   };
 
+  const getLeadStatusColor = (status: Lead['leadStatus']) => {
+    const colors = {
+      cold: "bg-blue-100 text-blue-800",
+      warm: "bg-yellow-100 text-yellow-800",
+      hot: "bg-red-100 text-red-800",
+      mild: "bg-green-100 text-green-800"
+    }
+    return colors[status] || colors.cold;
+  }
+
+  const getLeadTypeColor = (type: Lead['leadType']) => {
+    const colors = {
+      'Pre construction': "bg-purple-100 text-purple-800",
+      'resale': "bg-indigo-100 text-indigo-800",
+      'seller': "bg-pink-100 text-pink-800",
+      'buyer': "bg-orange-100 text-orange-800"
+    }
+    return colors[type] || "bg-gray-100 text-gray-800";
+  }
+
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = searchQuery === "" || 
+      lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.property?.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesFilters = 
+      (filters.leadStatus === "" || lead.leadStatus === filters.leadStatus) &&
+      (filters.leadType === "" || lead.leadType === filters.leadType) &&
+      (filters.leadSource === "" || lead.leadSource === filters.leadSource) &&
+      (filters.leadResponse === "" || lead.leadResponse === filters.leadResponse) &&
+      (filters.clientType === "" || lead.clientType === filters.clientType)
+
+    return matchesSearch && matchesFilters
+  })
+
   // Only render table content after mounting
   if (!mounted) {
     return (
@@ -279,8 +356,10 @@ export function LeadListing() {
                 <TableHead>Name</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Source</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Property</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead>Assigned To</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -295,24 +374,175 @@ export function LeadListing() {
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Leads</CardTitle>
+          <CardTitle>Lead Management</CardTitle>
           <div className="flex gap-2">
-            <div className="relative">
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleFileUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <Button variant="outline">
-                <Upload className="h-4 w-4 mr-2" />
-                Import Excel
-              </Button>
-            </div>
-            <Button onClick={() => document.getElementById('addLeadDialog')?.showModal()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Lead
+            <Button variant="outline" onClick={() => document.getElementById('fileInput')?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import Leads
             </Button>
+            <input
+              type="file"
+              id="fileInput"
+              className="hidden"
+              accept=".xlsx,.xls"
+              onChange={handleFileUpload}
+            />
+            <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Lead
+                </Button>
+              </DialogTrigger>
+              <LeadForm open={isAddLeadOpen} onClose={() => setIsAddLeadOpen(false)} />
+            </Dialog>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-4">
+          <div className="flex-1 flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search leads..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Filter Leads</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Lead Status</Label>
+                    <Select
+                      value={filters.leadStatus}
+                      onValueChange={(value) => setFilters({ ...filters, leadStatus: value === "all" ? "" : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {leadStatuses.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Lead Type</Label>
+                    <Select
+                      value={filters.leadType}
+                      onValueChange={(value) => setFilters({ ...filters, leadType: value === "all" ? "" : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {leadTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Lead Source</Label>
+                    <Select
+                      value={filters.leadSource}
+                      onValueChange={(value) => setFilters({ ...filters, leadSource: value === "all" ? "" : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {leadSources.map((source) => (
+                          <SelectItem key={source.value} value={source.value}>
+                            {source.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Lead Response</Label>
+                    <Select
+                      value={filters.leadResponse}
+                      onValueChange={(value) => setFilters({ ...filters, leadResponse: value === "all" ? "" : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select response" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {leadResponses.map((response) => (
+                          <SelectItem key={response.value} value={response.value}>
+                            {response.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Client Type</Label>
+                    <Select
+                      value={filters.clientType}
+                      onValueChange={(value) => setFilters({ ...filters, clientType: value === "all" ? "" : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select client type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {clientTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex justify-end gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setFilters({
+                          leadStatus: "",
+                          leadType: "",
+                          leadSource: "",
+                          leadResponse: "",
+                          clientType: "",
+                        })
+                      }}
+                    >
+                      Reset
+                    </Button>
+                    <Button onClick={() => setIsFilterDialogOpen(false)}>
+                      Apply Filters
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </CardHeader>
@@ -323,13 +553,15 @@ export function LeadListing() {
               <TableHead>Name</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Source</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Property</TableHead>
               <TableHead>Created</TableHead>
+              <TableHead>Assigned To</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {leads.map((lead) => (
+            {filteredLeads.map((lead) => (
               <TableRow key={lead._id}>
                 <TableCell>
                   <Button
@@ -347,13 +579,21 @@ export function LeadListing() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge className={getStatusColor(lead.status as Lead['status'])}>
-                    {lead.status}
+                  <Badge className={getLeadStatusColor(lead.leadStatus || 'cold')}>
+                    {(lead.leadStatus || 'cold').charAt(0).toUpperCase() + (lead.leadStatus || 'cold').slice(1)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge className={getLeadTypeColor(lead.leadType)}>
+                    {(lead.leadType || 'buyer').charAt(0).toUpperCase() + (lead.leadType || 'buyer').slice(1)}
                   </Badge>
                 </TableCell>
                 <TableCell>{lead.property}</TableCell>
                 <TableCell>
                   {formatDate(lead.date)}
+                </TableCell>
+                <TableCell>
+                  {lead.assignedTo ? getUserName(lead.assignedTo) : 'Unassigned'}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-2">
@@ -377,8 +617,7 @@ export function LeadListing() {
                               onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
-                                const leadId = typeof lead._id === 'object' ? lead._id.toString() : lead._id
-                                router.push(`/lead/${leadId}`)
+                                router.push(`/lead/${lead._id}`)
                               }}
                             >
                               <Info className="h-4 w-4" />
@@ -402,7 +641,7 @@ export function LeadListing() {
                     <div className="mt-2 space-y-1">
                       <div className="text-sm text-gray-600">
                         Tasks: {lead.tasks?.length || 0}
-                        {lead.tasks?.length > 0 && (
+                        {lead.tasks && lead.tasks.length > 0 && (
                           <span className="ml-2 text-gray-500">
                             ({lead.tasks.filter(t => t.status === 'pending').length} pending)
                           </span>

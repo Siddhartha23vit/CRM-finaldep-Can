@@ -139,65 +139,65 @@ export default function UserLayout({ children }: UserLayoutProps) {
   };
 
   const SidebarContent = () => (
-    <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-800 px-6 ring-1 ring-white/5">
-      <div className="flex h-16 shrink-0 items-center">
-        <Link href="/user/dashboard" className="flex items-center">
-          <span className="text-2xl font-bold text-red-500">GetHome</span>
-          <span className="ml-2 text-xl font-semibold text-gray-200">Realty</span>
-        </Link>
-      </div>
-      <nav className="flex flex-1 flex-col">
-        <ul role="list" className="flex flex-1 flex-col gap-y-7">
-          <li>
-            <ul role="list" className="-mx-2 space-y-1">
-              {navigation.map((item) => {
-                if (!userPermissions[item.permission]) return null;
-                const isActive = pathname === item.href;
-                return (
-                  <motion.li key={item.name} whileHover={{ x: 4 }}>
-                    <Link
-                      href={item.href}
-                      className={`
-                        group flex gap-x-3 rounded-md p-2 text-sm leading-6
-                        ${isActive
-                          ? "bg-gray-700 text-red-500"
-                          : "text-gray-400 hover:text-red-500 hover:bg-gray-700"
-                        }
-                      `}
+            <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-800 px-6 ring-1 ring-white/5">
+              <div className="flex h-16 shrink-0 items-center">
+                <Link href="/user/dashboard" className="flex items-center">
+                  <span className="text-2xl font-bold text-red-500">GetHome</span>
+                  <span className="ml-2 text-xl font-semibold text-gray-200">Realty</span>
+                </Link>
+              </div>
+              <nav className="flex flex-1 flex-col">
+                <ul role="list" className="flex flex-1 flex-col gap-y-7">
+                  <li>
+                    <ul role="list" className="-mx-2 space-y-1">
+                      {navigation.map((item) => {
+                        if (!userPermissions[item.permission]) return null;
+                        const isActive = pathname === item.href;
+                        return (
+                          <motion.li key={item.name} whileHover={{ x: 4 }}>
+                            <Link
+                              href={item.href}
+                              className={`
+                                group flex gap-x-3 rounded-md p-2 text-sm leading-6
+                                ${isActive
+                                  ? "bg-gray-700 text-red-500"
+                                  : "text-gray-400 hover:text-red-500 hover:bg-gray-700"
+                                }
+                              `}
                       onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <item.icon
-                        className={`h-6 w-6 shrink-0 ${
-                          isActive ? "text-red-500" : "text-gray-400 group-hover:text-red-500"
-                        }`}
-                        aria-hidden="true"
-                      />
-                      {item.name}
-                    </Link>
-                  </motion.li>
-                );
-              })}
-            </ul>
-          </li>
-          <li className="mt-auto">
-            <div className="flex items-center justify-between">
-              <ThemeToggle />
-              <Button
-                variant="ghost"
-                className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-400 hover:bg-gray-700 hover:text-red-500"
+                            >
+                              <item.icon
+                                className={`h-6 w-6 shrink-0 ${
+                                  isActive ? "text-red-500" : "text-gray-400 group-hover:text-red-500"
+                                }`}
+                                aria-hidden="true"
+                              />
+                              {item.name}
+                            </Link>
+                          </motion.li>
+                        );
+                      })}
+                    </ul>
+                  </li>
+                  <li className="mt-auto">
+                    <div className="flex items-center justify-between">
+                      <ThemeToggle />
+                      <Button
+                        variant="ghost"
+                        className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-400 hover:bg-gray-700 hover:text-red-500"
                 onClick={handleLogout}
-              >
-                <LogOut
-                  className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-red-500"
-                  aria-hidden="true"
-                />
-                Logout
-              </Button>
+                      >
+                        <LogOut
+                          className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-red-500"
+                          aria-hidden="true"
+                        />
+                        Logout
+                      </Button>
+                    </div>
+                  </li>
+                </ul>
+              </nav>
             </div>
-          </li>
-        </ul>
-      </nav>
-    </div>
   );
 
   if (!user || !userPermissions || !isMounted) {

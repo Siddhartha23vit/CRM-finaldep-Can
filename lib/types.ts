@@ -37,7 +37,7 @@ export interface Showing {
 export interface Task {
   id: string;
   title: string;
-  date: string;
+  date: string;  // ISO date string format
   description?: string;
   status: 'pending' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high';
@@ -52,12 +52,18 @@ export interface Lead {
   property: string;
   date: string;  // ISO date string format
   notes: string;
+  leadStatus: 'cold' | 'warm' | 'hot' | 'mild';
+  leadResponse: 'active' | 'inactive' | 'not answering' | 'not actively answering' | 'always responding';
+  leadSource: 'google ads' | 'meta' | 'refferal' | 'linkedin' | 'youtube';
+  leadType: 'Pre construction' | 'resale' | 'seller' | 'buyer';
+  clientType: 'Investor' | 'custom buyer' | 'first home buyer' | 'seasonal investor' | 'commercial buyer';
+  assignedTo?: string; // ID of the assigned user
   callHistory: Array<{
     date: string;  // ISO date string format
     duration: number;
     recording?: string;
   }>;
-  propertyPreferences: {
+  propertyPreferences?: {
     budget: {
       min: number;
       max: number;
@@ -68,21 +74,22 @@ export interface Lead {
     locations: string[]; // Preferred neighborhoods/cities
     features: string[]; // ['garage', 'basement', 'pool', etc]
   };
-  mortgageDetails: {
+  mortgageDetails?: {
     preApproved: boolean;
     lender?: string;
     preApprovalAmount?: number;
     downPayment?: number;
     mortgageType?: string; // 'fixed' | 'variable'
   };
-  documents: Array<{
+  documents?: Array<{
     type: string; // 'id', 'preApproval', 'offer', 'agreement'
     name: string;
     url: string;
     dateUploaded: string;
   }>;
-  showings?: Showing[]
-  offers: Array<{
+  showings?: Showing[];
+  tasks?: Task[];
+  offers?: Array<{
     propertyAddress: string;
     offerAmount: number;
     offerDate: string;
@@ -90,5 +97,4 @@ export interface Lead {
     conditions: string[];
     closingDate?: string;
   }>;
-  tasks?: Task[];
 } 

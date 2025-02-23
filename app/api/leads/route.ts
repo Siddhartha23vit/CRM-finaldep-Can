@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
+import { ObjectId } from "mongodb"
 
 // Sample lead data
 const SAMPLE_LEADS = [
@@ -97,14 +98,22 @@ const SAMPLE_LEADS = [
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const assignedTo = searchParams.get('assignedTo');
+
+    let query = {};
+    if (assignedTo) {
+      query = { assignedTo };
+    }
+
     const { db } = await connectToDatabase();
-    const leads = await db.collection("leads").find({}).toArray();
+    const leads = await db.collection("leads").find(query).toArray();
     
     return NextResponse.json(leads);
   } catch (error) {
-    console.error("Fetch leads error:", error);
+    console.error("Error fetching leads:", error);
     return NextResponse.json(
-      { error: "Failed to fetch leads" }, 
+      { error: "Failed to fetch leads" },
       { status: 500 }
     );
   }
@@ -129,6 +138,55 @@ export async function PUT(request: Request) {
   } catch (error) {
     console.error("Update lead error:", error)
     return NextResponse.json({ error: "Server error" }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const leadData = await request.json()
+    const { db } = await connectToDatabase()
+
+    // Validate required fields
+    if (!leadData.name || !leadData.email || !leadData.phone || !leadData.property) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      )
+    }
+
+    // Convert assignedTo to ObjectId if present
+    if (leadData.assignedTo) {
+      try {
+        leadData.assignedTo = new ObjectId(leadData.assignedTo)
+      } catch (error) {
+        return NextResponse.json(
+          { error: "Invalid assignedTo ID" },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Create the lead
+    const result = await db.collection("leads").insertOne(leadData)
+
+    if (!result.insertedId) {
+      throw new Error("Failed to create lead")
+    }
+
+    // Return created lead
+    return NextResponse.json({
+      success: true,
+      lead: {
+        ...leadData,
+        _id: result.insertedId,
+      },
+    })
+  } catch (error) {
+    console.error("Error creating lead:", error)
+    return NextResponse.json(
+      { error: "Failed to create lead" },
+      { status: 500 }
+    )
   }
 }
 

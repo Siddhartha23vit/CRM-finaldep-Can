@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { UserPlus, Edit2, Trash2, Phone, Mail, MapPin } from "lucide-react";
+import { UserPlus, Edit2, Trash2, Phone, Mail, MapPin, Eye, Filter, Search } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -48,7 +48,8 @@ interface Lead {
   email: string;
   phone: string;
   address: string;
-  status: string;
+  leadStatus: string;
+  leadType: 'Pre construction' | 'resale' | 'seller' | 'buyer';
   source: string;
   notes: string;
   assignedTo: string;
@@ -56,35 +57,57 @@ interface Lead {
   updatedAt: string;
 }
 
-const defaultLead = {
+type LeadFormData = Omit<Lead, '_id' | 'createdAt' | 'updatedAt'>;
+
+const leadStatuses = [
+  { value: "cold", label: "Cold" },
+  { value: "warm", label: "Warm" },
+  { value: "hot", label: "Hot" },
+  { value: "mild", label: "Mild" },
+];
+
+const leadResponses = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "not answering", label: "Not Answering" },
+  { value: "not actively answering", label: "Not Actively Answering" },
+  { value: "always responding", label: "Always Responding" },
+];
+
+const leadSources = [
+  { value: "google ads", label: "Google Ads" },
+  { value: "meta", label: "Meta" },
+  { value: "refferal", label: "Referral" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "youtube", label: "YouTube" },
+];
+
+const leadTypes = [
+  { value: "Pre construction", label: "Pre Construction" },
+  { value: "resale", label: "Resale" },
+  { value: "seller", label: "Seller" },
+  { value: "buyer", label: "Buyer" },
+];
+
+const clientTypes = [
+  { value: "Investor", label: "Investor" },
+  { value: "custom buyer", label: "Custom Buyer" },
+  { value: "first home buyer", label: "First Home Buyer" },
+  { value: "seasonal investor", label: "Seasonal Investor" },
+  { value: "commercial buyer", label: "Commercial Buyer" },
+];
+
+const defaultLead: LeadFormData = {
   name: "",
   email: "",
   phone: "",
   address: "",
-  status: "new",
+  leadStatus: "cold",
+  leadType: "buyer",
   source: "",
   notes: "",
   assignedTo: "",
 };
-
-const leadStatuses = [
-  { value: "new", label: "New" },
-  { value: "contacted", label: "Contacted" },
-  { value: "qualified", label: "Qualified" },
-  { value: "proposal", label: "Proposal" },
-  { value: "negotiation", label: "Negotiation" },
-  { value: "closed", label: "Closed" },
-  { value: "lost", label: "Lost" },
-];
-
-const leadSources = [
-  { value: "website", label: "Website" },
-  { value: "referral", label: "Referral" },
-  { value: "social", label: "Social Media" },
-  { value: "email", label: "Email Campaign" },
-  { value: "phone", label: "Phone Inquiry" },
-  { value: "other", label: "Other" },
-];
 
 // Add motion table row
 const MotionTableRow = motion(TableRow);
@@ -98,6 +121,15 @@ export default function LeadsPage() {
   const [formData, setFormData] = useState(defaultLead);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    leadStatus: "",
+    leadType: "",
+    leadSource: "",
+    leadResponse: "",
+    clientType: "",
+  });
 
   useEffect(() => {
     fetchLeads();
@@ -105,9 +137,19 @@ export default function LeadsPage() {
 
   const fetchLeads = async () => {
     try {
-      const response = await fetch("/api/leads");
+      // Get current user from localStorage
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        router.push('/login');
+        return;
+      }
+      const user = JSON.parse(userData);
+
+      const response = await fetch(`/api/leads?assignedTo=${user._id}`);
       const data = await response.json();
-      setLeads(data);
+      
+      // Only set leads that are assigned to the current user
+      setLeads(data.filter((lead: Lead) => lead.assignedTo === user._id));
       setIsLoading(false);
     } catch (error) {
       console.error("Error fetching leads:", error);
@@ -167,7 +209,7 @@ export default function LeadsPage() {
         title: "Success",
         description: "Lead deleted successfully",
       });
-
+      
       fetchLeads();
     } catch (error) {
       toast({
@@ -180,26 +222,53 @@ export default function LeadsPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
+    if (!status) return "text-gray-400 bg-gray-400/10";
+    
     switch (status.toLowerCase()) {
-      case "new":
+      case "cold":
         return "text-blue-400 bg-blue-400/10";
-      case "contacted":
+      case "warm":
         return "text-yellow-400 bg-yellow-400/10";
-      case "qualified":
-        return "text-green-400 bg-green-400/10";
-      case "proposal":
-        return "text-purple-400 bg-purple-400/10";
-      case "negotiation":
-        return "text-orange-400 bg-orange-400/10";
-      case "closed":
-        return "text-teal-400 bg-teal-400/10";
-      case "lost":
+      case "hot":
         return "text-red-400 bg-red-400/10";
+      case "mild":
+        return "text-green-400 bg-green-400/10";
       default:
         return "text-gray-400 bg-gray-400/10";
     }
   };
+
+  const getLeadTypeColor = (type: string | undefined) => {
+    switch (type) {
+      case "Pre construction":
+        return "text-purple-500 bg-purple-500/10";
+      case "resale":
+        return "text-indigo-500 bg-indigo-500/10";
+      case "seller":
+        return "text-pink-500 bg-pink-500/10";
+      case "buyer":
+      default:
+        return "text-orange-500 bg-orange-500/10";
+    }
+  };
+
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = searchQuery === "" || 
+      lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.address?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesFilters = 
+      (filters.leadStatus === "" || lead.leadStatus === filters.leadStatus) &&
+      (filters.leadType === "" || lead.leadType === filters.leadType) &&
+      (filters.leadSource === "" || lead.source === filters.leadSource) &&
+      (filters.leadResponse === "" || lead.leadResponse === filters.leadResponse) &&
+      (filters.clientType === "" || lead.clientType === filters.clientType);
+
+    return matchesSearch && matchesFilters;
+  });
 
   if (isLoading) {
     return (
@@ -233,7 +302,160 @@ export default function LeadsPage() {
 
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-gray-100">All Leads</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-gray-100">All Leads</CardTitle>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <div className="flex-1 flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search leads..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 bg-gray-700 border-gray-600"
+                />
+              </div>
+              <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="border-gray-600 hover:bg-gray-700">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filters
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-gray-800 border-gray-700">
+                  <DialogHeader>
+                    <DialogTitle className="text-gray-100">Filter Leads</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label className="text-gray-100">Lead Status</Label>
+                      <Select
+                        value={filters.leadStatus}
+                        onValueChange={(value) => setFilters({ ...filters, leadStatus: value === "all" ? "" : value })}
+                      >
+                        <SelectTrigger className="bg-gray-700 border-gray-600">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-700 border-gray-600">
+                          <SelectItem value="all">All</SelectItem>
+                          {leadStatuses.map((status) => (
+                            <SelectItem key={status.value} value={status.value}>
+                              {status.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-gray-100">Lead Type</Label>
+                      <Select
+                        value={filters.leadType}
+                        onValueChange={(value) => setFilters({ ...filters, leadType: value === "all" ? "" : value })}
+                      >
+                        <SelectTrigger className="bg-gray-700 border-gray-600">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-700 border-gray-600">
+                          <SelectItem value="all">All</SelectItem>
+                          {leadTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-gray-100">Lead Source</Label>
+                      <Select
+                        value={filters.leadSource}
+                        onValueChange={(value) => setFilters({ ...filters, leadSource: value === "all" ? "" : value })}
+                      >
+                        <SelectTrigger className="bg-gray-700 border-gray-600">
+                          <SelectValue placeholder="Select source" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-700 border-gray-600">
+                          <SelectItem value="all">All</SelectItem>
+                          {leadSources.map((source) => (
+                            <SelectItem key={source.value} value={source.value}>
+                              {source.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-gray-100">Lead Response</Label>
+                      <Select
+                        value={filters.leadResponse}
+                        onValueChange={(value) => setFilters({ ...filters, leadResponse: value === "all" ? "" : value })}
+                      >
+                        <SelectTrigger className="bg-gray-700 border-gray-600">
+                          <SelectValue placeholder="Select response" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-700 border-gray-600">
+                          <SelectItem value="all">All</SelectItem>
+                          {leadResponses.map((response) => (
+                            <SelectItem key={response.value} value={response.value}>
+                              {response.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-gray-100">Client Type</Label>
+                      <Select
+                        value={filters.clientType}
+                        onValueChange={(value) => setFilters({ ...filters, clientType: value === "all" ? "" : value })}
+                      >
+                        <SelectTrigger className="bg-gray-700 border-gray-600">
+                          <SelectValue placeholder="Select client type" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-700 border-gray-600">
+                          <SelectItem value="all">All</SelectItem>
+                          {clientTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setFilters({
+                            leadStatus: "",
+                            leadType: "",
+                            leadSource: "",
+                            leadResponse: "",
+                            clientType: "",
+                          });
+                        }}
+                        className="border-gray-600 hover:bg-gray-700"
+                      >
+                        Reset
+                      </Button>
+                      <Button 
+                        onClick={() => setIsFilterDialogOpen(false)}
+                        className="bg-red-500 hover:bg-red-600"
+                      >
+                        Apply Filters
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -242,27 +464,28 @@ export default function LeadsPage() {
                 <TableHead className="text-gray-400">Name</TableHead>
                 <TableHead className="text-gray-400">Contact</TableHead>
                 <TableHead className="text-gray-400">Status</TableHead>
+                <TableHead className="text-gray-400">Type</TableHead>
                 <TableHead className="text-gray-400">Source</TableHead>
                 <TableHead className="text-gray-400">Created</TableHead>
                 <TableHead className="text-gray-400 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leads.length === 0 ? (
+              {filteredLeads.length === 0 ? (
                 <MotionTableRow
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2 }}
                 >
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="text-center text-gray-400 py-4"
                   >
                     No leads found
                   </TableCell>
                 </MotionTableRow>
               ) : (
-                leads.map((lead, index) => (
+                filteredLeads.map((lead, index) => (
                   <MotionTableRow
                     key={lead._id}
                     className="border-gray-700"
@@ -272,7 +495,13 @@ export default function LeadsPage() {
                     whileHover={{ scale: 1.01, backgroundColor: "rgba(0,0,0,0.02)" }}
                   >
                     <TableCell className="font-medium text-gray-100">
-                      {lead.name}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-medium text-gray-100 hover:text-gray-300"
+                        onClick={() => router.push(`/user/lead/${lead._id}`)}
+                      >
+                        {lead.name}
+                      </Button>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1 text-gray-300">
@@ -291,9 +520,14 @@ export default function LeadsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(lead.status)}`}>
-                        {lead.status}
-                      </span>
+                      <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(lead.leadStatus)}`}>
+                        {(lead.leadStatus || 'cold').charAt(0).toUpperCase() + (lead.leadStatus || 'cold').slice(1)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getLeadTypeColor(lead.leadType)}`}>
+                        {(lead.leadType || 'buyer').charAt(0).toUpperCase() + (lead.leadType || 'buyer').slice(1)}
+                      </div>
                     </TableCell>
                     <TableCell className="text-gray-300">{lead.source}</TableCell>
                     <TableCell className="text-gray-300">
@@ -304,6 +538,14 @@ export default function LeadsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => router.push(`/user/lead/${lead._id}`)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setEditingLead(lead);
                             setFormData({
@@ -311,7 +553,8 @@ export default function LeadsPage() {
                               email: lead.email,
                               phone: lead.phone,
                               address: lead.address,
-                              status: lead.status,
+                              leadStatus: lead.leadStatus,
+                              leadType: lead.leadType,
                               source: lead.source,
                               notes: lead.notes,
                               assignedTo: lead.assignedTo,
@@ -390,10 +633,10 @@ export default function LeadsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="leadStatus">Status</Label>
                 <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  value={formData.leadStatus}
+                  onValueChange={(value) => setFormData({ ...formData, leadStatus: value })}
                 >
                   <SelectTrigger className="bg-gray-700 border-gray-600">
                     <SelectValue placeholder="Select status" />
@@ -420,6 +663,24 @@ export default function LeadsPage() {
                     {leadSources.map((source) => (
                       <SelectItem key={source.value} value={source.value}>
                         {source.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="leadType">Lead Type</Label>
+                <Select
+                  value={formData.leadType}
+                  onValueChange={(value) => setFormData({ ...formData, leadType: value as Lead['leadType'] })}
+                >
+                  <SelectTrigger className="bg-gray-700 border-gray-600">
+                    <SelectValue placeholder="Select lead type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-700 border-gray-600">
+                    {leadTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

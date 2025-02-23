@@ -18,6 +18,44 @@ import type { Lead, Task } from "@/lib/types"
 import { ShowingCalendar } from "@/components/showing-calendar"
 import { TaskManager } from "@/components/task-manager"
 
+const leadStatuses = [
+  { value: 'cold', label: 'Cold' },
+  { value: 'warm', label: 'Warm' },
+  { value: 'hot', label: 'Hot' },
+  { value: 'mild', label: 'Mild' },
+];
+
+const leadResponses = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'not answering', label: 'Not Answering' },
+  { value: 'not actively answering', label: 'Not Actively Answering' },
+  { value: 'always responding', label: 'Always Responding' },
+];
+
+const leadSources = [
+  { value: 'google ads', label: 'Google Ads' },
+  { value: 'meta', label: 'Meta' },
+  { value: 'refferal', label: 'Refferal' },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'youtube', label: 'YouTube' },
+];
+
+const leadTypes = [
+  { value: 'Pre construction', label: 'Pre Construction' },
+  { value: 'resale', label: 'Resale' },
+  { value: 'seller', label: 'Seller' },
+  { value: 'buyer', label: 'Buyer' },
+];
+
+const clientTypes = [
+  { value: 'Investor', label: 'Investor' },
+  { value: 'custom buyer', label: 'Custom Buyer' },
+  { value: 'first home buyer', label: 'First Home Buyer' },
+  { value: 'seasonal investor', label: 'Seasonal Investor' },
+  { value: 'commercial buyer', label: 'Commercial Buyer' },
+];
+
 export default function LeadDetailPage() {
   const router = useRouter()
   const params = useParams()
@@ -25,9 +63,11 @@ export default function LeadDetailPage() {
   const [leadData, setLeadData] = useState<Lead | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [newNote, setNewNote] = useState("")
+  const [users, setUsers] = useState<{ _id: string; name: string }[]>([])
 
   useEffect(() => {
     fetchLead()
+    fetchUsers()
   }, [params.leadId])
 
   const fetchLead = async () => {
@@ -58,6 +98,21 @@ export default function LeadDetailPage() {
     }
   }
 
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users')
+      const data = await response.json()
+      setUsers(data)
+    } catch (error) {
+      console.error('Error fetching users:', error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch users",
+      })
+    }
+  }
+
   const handleSubmit = async () => {
     if (!leadData) return
 
@@ -72,6 +127,9 @@ export default function LeadDetailPage() {
       if (!response.ok) {
         throw new Error("Failed to update lead")
       }
+
+      // Dispatch custom event to notify lead update
+      window.dispatchEvent(new Event('leadUpdated'))
 
       toast({
         title: "Success",
@@ -253,21 +311,23 @@ export default function LeadDetailPage() {
                     onChange={(e) => setLeadData({ ...leadData, phone: e.target.value })}
                   />
                 </div>
+                
                 <div className="space-y-2">
-                  <Label>Status</Label>
+                  <Label>Assigned To</Label>
                   <Select
-                    value={leadData.status}
-                    onValueChange={(value) => setLeadData({ ...leadData, status: value })}
+                    value={leadData.assignedTo || 'unassigned'}
+                    onValueChange={(value) => setLeadData({ ...leadData, assignedTo: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select a user" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="contacted">Contacted</SelectItem>
-                      <SelectItem value="qualified">Qualified</SelectItem>
-                      <SelectItem value="lost">Lost</SelectItem>
-                      <SelectItem value="won">Won</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {users.map((user) => (
+                        <SelectItem key={user._id} value={user._id}>
+                          {user.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -282,6 +342,102 @@ export default function LeadDetailPage() {
                   <Label>Created Date</Label>
                   <div className="text-sm text-gray-500">
                     {formatDate(leadData.date)}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Lead Status</Label>
+                    <Select
+                      value={leadData.leadStatus}
+                      onValueChange={(value) => setLeadData({ ...leadData, leadStatus: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select lead status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leadStatuses.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Lead Response</Label>
+                    <Select
+                      value={leadData.leadResponse}
+                      onValueChange={(value) => setLeadData({ ...leadData, leadResponse: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select lead response" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leadResponses.map((response) => (
+                          <SelectItem key={response.value} value={response.value}>
+                            {response.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Lead Source</Label>
+                    <Select
+                      value={leadData.leadSource}
+                      onValueChange={(value) => setLeadData({ ...leadData, leadSource: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select lead source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leadSources.map((source) => (
+                          <SelectItem key={source.value} value={source.value}>
+                            {source.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Lead Type</Label>
+                    <Select
+                      value={leadData.leadType}
+                      onValueChange={(value) => setLeadData({ ...leadData, leadType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select lead type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leadTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Client Type</Label>
+                    <Select
+                      value={leadData.clientType}
+                      onValueChange={(value) => setLeadData({ ...leadData, clientType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select client type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clientTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </form>

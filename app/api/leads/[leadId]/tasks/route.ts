@@ -4,19 +4,19 @@ import { ObjectId } from "mongodb"
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { leadId: string } }
 ) {
   try {
     const { db } = await connectToDatabase()
     const { tasks } = await request.json()
 
     const result = await db.collection("leads").findOneAndUpdate(
-      { _id: new ObjectId(params.id) },
+      { _id: new ObjectId(params.leadId) },
       { $set: { tasks } },
       { returnDocument: 'after' }
     )
 
-    if (!result.value) {
+    if (!result?.value) {
       return NextResponse.json(
         { error: "Lead not found" },
         { status: 404 }

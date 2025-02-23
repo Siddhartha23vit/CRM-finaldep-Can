@@ -156,8 +156,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </Button>
           <div className="flex-1 flex items-center justify-between gap-2 sm:gap-4 min-w-0">
             <Link href="/dashboard" className="font-semibold text-red-500 truncate text-sm sm:text-base">
-              Get Home Realty
-            </Link>
+            Get Home Realty
+          </Link>
             <div className="flex items-center gap-1 sm:gap-2">
               <Button
                 variant="ghost"
@@ -227,11 +227,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex relative lg:h-[calc(100vh-0px)]">
         {/* Sidebar */}
         <aside
-          className={cn(
+              className={cn(
             "fixed inset-y-0 left-0 z-40 w-[240px] sm:w-64 bg-white border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static safe-top safe-bottom",
             isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-          )}
-        >
+              )}
+            >
           <div className="flex h-14 sm:h-16 items-center border-b px-4">
             <Link href="/dashboard" className="font-semibold text-red-500 text-sm sm:text-base">
               Get Home Realty
@@ -240,27 +240,27 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <nav className="flex flex-col h-[calc(100%-3.5rem)] sm:h-[calc(100%-4rem)] p-3 sm:p-4">
             <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:space-y-1">
               {navigationItems.map((item) => (
-                <Link
+          <Link
                   key={item.href}
                   href={item.href}
-                  className={cn(
+            className={cn(
                     "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-colors hover:text-gray-900 text-sm sm:text-base",
                     pathname === item.href ? "bg-gray-100 text-gray-900" : ""
-                  )}
+            )}
                   onClick={(e) => {
                     e.preventDefault();
                     setIsMobileMenuOpen(false);
                     router.push(item.href);
                   }}
-                >
+          >
                   {item.icon}
                   <span className="truncate">{item.label}</span>
-                </Link>
+          </Link>
               ))}
             </div>
             <div className="flex-1" />
-            <Button
-              variant="ghost"
+          <Button
+            variant="ghost"
               onClick={() => {
                 handleLogout();
                 setIsMobileMenuOpen(false);
@@ -269,61 +269,61 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             >
               <LogOut className="h-5 w-5 flex-shrink-0" />
               <span className="truncate">Logout</span>
-            </Button>
-          </nav>
-        </aside>
+          </Button>
+        </nav>
+      </aside>
 
-        {/* Main Content */}
+      {/* Main Content */}
         <main className="flex-1 flex flex-col min-h-0 w-full">
           {/* Desktop Header */}
           <header className="hidden lg:flex h-14 sm:h-16 items-center justify-between border-b bg-white px-4 sm:px-6 sticky top-0 z-30">
             <div className="flex-1 flex items-center gap-4 max-w-xl">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                <Input
-                  type="search"
+              <Input
+                type="search"
                   placeholder="Search..."
                   className="w-full pl-9 pr-9 h-9 sm:h-10"
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                />
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
                     size="sm"
                     className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                    onClick={clearSearch}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-                {isSearching && searchResults.length > 0 && (
+                  onClick={clearSearch}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+              {isSearching && searchResults.length > 0 && (
                   <Card className="absolute top-full left-0 right-0 mt-1 shadow-lg">
                     <CardContent className="p-1 sm:p-2 max-h-[60vh] overflow-y-auto">
-                      {searchResults.map((result) => (
-                        <Button
-                          key={`${result.type}-${result.id}`}
-                          variant="ghost"
+                    {searchResults.map((result) => (
+                      <Button
+                        key={`${result.type}-${result.id}`}
+                        variant="ghost"
                           className="w-full justify-start text-left h-auto py-2 px-3"
-                          onClick={() => handleResultClick(result)}
-                        >
+                        onClick={() => handleResultClick(result)}
+                      >
                           <div className="w-full min-w-0">
                             <div className="font-medium truncate">{result.title}</div>
                             <div className="text-sm text-gray-500 truncate">{result.subtitle}</div>
-                          </div>
-                        </Button>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
+                        </div>
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 ml-4">
               <Button variant="ghost" size="sm" className="h-8 w-8 sm:h-9 sm:w-9 relative">
                 <BellIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
-              </Button>
-              <LanguageSelector />
+            </Button>
+            <LanguageSelector />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
@@ -349,13 +349,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-          </header>
+          </div>
+        </header>
 
-          {/* Page Content */}
+        {/* Page Content */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 safe-bottom">
             <div className="container mx-auto max-w-7xl">
-              {children}
+          {children}
             </div>
           </div>
         </main>

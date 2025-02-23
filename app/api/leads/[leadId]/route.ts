@@ -4,22 +4,22 @@ import { ObjectId } from "mongodb"
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { leadId: string } }
 ) {
   try {
     const { db } = await connectToDatabase()
-    console.log('Searching for lead with ID:', params.id)
+    console.log('Searching for lead with ID:', params.leadId)
 
     // Try to find by string ID first
     let lead = await db.collection("leads").findOne({ 
-      _id: params.id 
+      _id: params.leadId 
     })
 
     // If not found, try ObjectId
     if (!lead) {
       try {
         lead = await db.collection("leads").findOne({ 
-          _id: new ObjectId(params.id)
+          _id: new ObjectId(params.leadId)
         })
       } catch (error) {
         console.log('Invalid ObjectId format:', error)
@@ -27,7 +27,7 @@ export async function GET(
     }
 
     if (!lead) {
-      console.log('No lead found with ID:', params.id)
+      console.log('No lead found with ID:', params.leadId)
       return NextResponse.json(
         { error: "Lead not found" },
         { status: 404 }
@@ -47,32 +47,32 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { leadId: string } }
 ) {
   try {
     const { db } = await connectToDatabase()
     const updates = await request.json()
     
-    console.log('Attempting to update lead:', params.id);
+    console.log('Attempting to update lead:', params.leadId);
     
     // First find the lead by ID to get the name
     let lead;
     try {
       lead = await db.collection("leads").findOne({ 
         $or: [
-          { _id: params.id },
-          { _id: new ObjectId(params.id) }
+          { _id: params.leadId },
+          { _id: new ObjectId(params.leadId) }
         ]
       });
     } catch (error) {
       console.log('Error finding lead:', error);
       lead = await db.collection("leads").findOne({ 
-        _id: params.id 
+        _id: params.leadId 
       });
     }
 
     if (!lead) {
-      console.error('No lead found with ID:', params.id);
+      console.error('No lead found with ID:', params.leadId);
       return NextResponse.json(
         { error: "Lead not found" },
         { status: 404 }
