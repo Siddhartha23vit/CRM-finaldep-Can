@@ -380,12 +380,12 @@ export function LeadListing() {
               <Upload className="h-4 w-4 mr-2" />
               Import Leads
             </Button>
-            <input
-              type="file"
+              <input
+                type="file"
               id="fileInput"
               className="hidden"
-              accept=".xlsx,.xls"
-              onChange={handleFileUpload}
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
             />
             <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
               <DialogTrigger asChild>
@@ -538,7 +538,7 @@ export function LeadListing() {
                     </Button>
                     <Button onClick={() => setIsFilterDialogOpen(false)}>
                       Apply Filters
-                    </Button>
+            </Button>
                   </div>
                 </div>
               </DialogContent>
